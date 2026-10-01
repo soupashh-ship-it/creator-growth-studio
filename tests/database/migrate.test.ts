@@ -15,7 +15,7 @@ describe('migrations', () => {
     const db = openDatabase(':memory:')
     const applied = runMigrations(db, migrations)
     expect(applied).toBe(migrations.length)
-    expect(currentVersion(db)).toBe(4)
+    expect(currentVersion(db)).toBe(5)
     db.close()
   })
 

@@ -147,4 +147,9 @@ export const IPC = {
   dataImportCsv: 'data:importCsv',
   aiUsage: 'ai:usage',
   aiConsensus: 'ai:consensus',
+  growthSponsor: 'growth:sponsor',
+  growthDiagnose: 'growth:diagnose',
+  growthProgress: 'growth:progress',
+  dataSavePdf: 'data:savePdf',
+  appUpdateCheck: 'app:updateCheck',
 } as const

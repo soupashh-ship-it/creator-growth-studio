@@ -13,6 +13,8 @@ packaged app launches (`npx electron . --smoke-test` → `[smoke] renderer ready
 `[smoke] thumbnail decode+score ok`).
 `npm run package:dir` produces `release/win-unpacked/Creator Growth Studio.exe`.
 
+Updated after the 2026-10-01 audit sweep: 393 tests, typecheck/lint/build/smoke green.
+
 ---
 
 ## Phase 0 — Foundation & Documentation ✅
@@ -170,6 +172,20 @@ packaged app launches (`npx electron . --smoke-test` → `[smoke] renderer ready
 | 9.3 | Windows installer | Done | `npm run package` → NSIS config; `package:dir` verified launching |
 | 9.4 | Final acceptance test (§155) | Done (harness) | In-app “Acceptance self-check” on Developer Tools runs every locally exercisable end-to-end step and reports pass/fail/**blocked**; the only blocked steps need real Google/Twitch/ChatGPT registrations, exactly as before |
 
+## Phase 10 — Audit-gap completion (2026-10-01)
+
+| # | Task | Status | Notes |
+|---|------|--------|-------|
+| 10.1 | Mobile thumbnail test (§19) | Done | `core/thumbnail/sizes.ts` + size-test section on Thumbnails page (scaled previews + measured-feature warnings); tests |
+| 10.2 | Sponsor readiness + media kit (§68) | Done | `core/scores/sponsor.ts` + Growth section on Channel page (readiness components, copyable media kit, honest caveat); tests |
+| 10.3 | Early performance diagnosis (§53) | Done | `core/scores/diagnosis.ts` (channel-median baselines, hypothesis-only) + Diagnosis section on Videos; tests |
+| 10.4 | Goal progress tracking (§119) | Done | Migration 0005 `channel_snapshots`, snapshot recorded on platform sync, `core/scores/progress.ts` (real 30-day deltas, no date predictions) |
+| 10.5 | PDF export (§69) | Done | dependency-free `export/pdf.ts` + media-kit PDF export on Channel; tests |
+| 10.6 | Palette keyword commands (§70) | Done | Analyze video / keyword research / generate titles / analyze thumbnail / find competitor / connect flows / ask Copilot added |
+| 10.7 | Per-type notification disable (§120) | Done | `notifications.disabledTypes` setting; scheduler filters recording + toasts; toggles on Advanced |
+| 10.8 | Update check (§88) | Done | `desktop/update-service.ts` GitHub release check (read-only, never auto-installs) + DevTools section |
+| 10.9 | Feature matrix sweep | Done | full rebuild: 155 rows verified in code |
+
 ## Known gaps (honest)
 
 - Live end-to-end flows against **real** accounts (YouTube/Twitch/ChatGPT) are
@@ -182,6 +198,7 @@ packaged app launches (`npx electron . --smoke-test` → `[smoke] renderer ready
   `not_configured` rather than data.
 - **Every nav page is now implemented**; no page renders the "not implemented
   yet" placeholder. Depth varies per page — see the honest limits below.
+- §19/§53/§68/§69-PDF/§70/§88/§119/§120 closed 2026-10-01 (Phase 10).
 - Stream session history records a peak-so-far from live syncs; Helix offers no
   historical concurrent-viewer series, so past sessions keep their last known
   concurrent count rather than a reconstructed curve.

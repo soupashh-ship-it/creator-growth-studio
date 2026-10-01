@@ -5,6 +5,10 @@ import { planFromSavedKeywords } from '../research/ideas'
 import { analyzeKeyword } from '../research/keywords'
 import { csvToRecords, toCsv } from '../export/exporters'
 import { buildMonthlyReview, saveTextFile } from './report-service'
+import { buildSponsorReport, diagnoseStoredVideo, buildProgressReport } from './growth-service'
+import { checkForUpdate } from './update-service'
+import { renderPdf, markdownToPdfBlocks } from '../export/pdf'
+import { writeFileSync } from 'node:fs'
 import {
   buildAnalyticsOverview,
   buildContentGaps,
@@ -178,6 +182,11 @@ export const IPC = {
   logsDiagnostics: 'logs:diagnostics',
   logsSetLevel: 'logs:setLevel',
   settingsSetRefreshInterval: 'settings:setRefreshInterval',
+  growthSponsor: 'growth:sponsor',
+  growthDiagnose: 'growth:diagnose',
+  growthProgress: 'growth:progress',
+  dataSavePdf: 'data:savePdf',
+  appUpdateCheck: 'app:updateCheck',
   settingsSetTaskProvider: 'settings:setTaskProvider',
   settingsGetTaskOverrides: 'settings:getTaskOverrides',
   dataImportCsv: 'data:importCsv',
@@ -359,6 +368,47 @@ export function registerIpcHandlers(): void {
     (_event, payload: { defaultName: string; content: string }) =>
       saveTextFile({ defaultName: payload.defaultName, content: payload.content }),
   )
+
+  // ---- §68 sponsor readiness / §53 diagnosis / §119 goal progress ----------
+  ipcMain.handle(IPC.growthSponsor, () => buildSponsorReport(ensureWorkspace()))
+  ipcMain.handle(IPC.growthDiagnose, (_event, payload: { videoId: string }) =>
+    diagnoseStoredVideo(ensureWorkspace(), payload?.videoId ?? ''),
+  )
+  ipcMain.handle(IPC.growthProgress, () => buildProgressReport(ensureWorkspace()))
+
+  // ---- §69 PDF export (plain-text PDF, written via OS save dialog) ----------
+  ipcMain.handle(IPC.dataSavePdf, async (_event, payload: { defaultName: string; title: string; markdown: string }) => {
+    const { dialog, BrowserWindow } = await import('electron')
+    const parent = BrowserWindow.getFocusedWindow()
+    const options = {
+      title: 'Save PDF export',
+      defaultPath: payload.defaultName.endsWith('.pdf') ? payload.defaultName : `${payload.defaultName}.pdf`,
+      filters: [{ name: 'PDF', extensions: ['pdf'] }],
+    }
+    const result = parent ? await dialog.showSaveDialog(parent, options) : await dialog.showSaveDialog(options)
+    if (result.canceled || !result.filePath) return { ok: false, canceled: true }
+    try {
+      const bytes = renderPdf(markdownToPdfBlocks(payload.title, payload.markdown))
+      writeFileSync(result.filePath, Buffer.from(bytes))
+      return { ok: true, path: result.filePath }
+    } catch (error) {
+      return { ok: false, error: error instanceof Error ? error.message : 'Could not write the PDF.' }
+    }
+  })
+
+  // ---- §88 update check (read-only; user opens the release page) -----------
+  ipcMain.handle(IPC.appUpdateCheck, async () => {
+    const result = await checkForUpdate(app.getVersion())
+    if (result.ok && result.updateAvailable && result.releaseUrl) {
+      // Only records a notification; nothing is downloaded or installed.
+      getServices().repos.createNotification({
+        workspaceId: ensureWorkspace(),
+        type: 'update',
+        payload: { version: result.latestVersion, url: result.releaseUrl },
+      })
+    }
+    return result
+  })
 
   // ---- content ideas (§21, §31) ------------------------------------------
   ipcMain.handle(IPC.ideasList, () => getServices().repos.listContentIdeas(ensureWorkspace()))

@@ -148,6 +148,7 @@ export function Videos(): JSX.Element {
         </section>
 
         <PostPublishSection videos={rows} />
+        <DiagnosisSection videos={rows} />
         </>
       )}
     </div>
@@ -284,6 +285,92 @@ function PostPublishSection({ videos }: { videos: VideoRow[] }): JSX.Element | n
           ))}
         </ul>
       </div>
+    </section>
+  )
+}
+
+interface DiagnosisFinding {
+  stage: string
+  summary: string
+  evidence: string[]
+  actions: string[]
+}
+
+/**
+ * §53 early performance diagnosis: compares the selected video's synced CTR /
+ * retention against the channel medians and names the likely limiting stage.
+ * Hypotheses with evidence only — never causes, never invented numbers.
+ */
+function DiagnosisSection({ videos }: { videos: VideoRow[] }): JSX.Element | null {
+  const [videoId, setVideoId] = useState<string | null>(null)
+  const [finding, setFinding] = useState<DiagnosisFinding | null>(null)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const withViews = videos.filter((video) => video.views !== null)
+  if (withViews.length === 0) return null
+
+  async function run(): Promise<void> {
+    if (!videoId) return
+    setBusy(true)
+    setError(null)
+    try {
+      const result = await callIpc<DiagnosisFinding>(IPC.growthDiagnose, { videoId })
+      setFinding(result)
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Diagnosis failed.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <section className="rounded-lg border border-[var(--color-border-subtle)] bg-[var(--color-surface-1)] p-4">
+      <h2 className="text-sm font-semibold">Early performance diagnosis</h2>
+      <p className="mt-1 text-[12px] text-[var(--color-text-secondary)]">
+        Compares synced CTR/retention against your channel medians and names the likely limiting stage. Hypotheses, not causes.
+      </p>
+      <div className="mt-2 flex flex-wrap items-center gap-2">
+        <select
+          value={videoId ?? ''}
+          onChange={(e) => setVideoId(e.target.value || null)}
+          aria-label="Video to diagnose"
+          className="min-w-56 rounded-md border border-[var(--color-border-subtle)] bg-[var(--color-surface-2)] px-3 py-2 text-[13px]"
+        >
+          <option value="">Choose a video…</option>
+          {withViews.map((video) => (
+            <option key={video.id} value={video.id}>{video.title ?? '(untitled)'}</option>
+          ))}
+        </select>
+        <button
+          type="button"
+          onClick={() => void run()}
+          disabled={busy || videoId === null}
+          className="rounded-md bg-[var(--color-accent)] px-3 py-1.5 text-[12px] font-medium text-[#0b0d10] disabled:opacity-40"
+        >
+          {busy ? 'Diagnosing…' : 'Diagnose'}
+        </button>
+      </div>
+      {error && <p className="mt-2 text-[12px] text-[var(--color-danger)]">{error}</p>}
+      {finding && (
+        <div className="mt-3 space-y-2 rounded-md bg-[var(--color-surface-2)] p-3">
+          <div className="text-[11px] uppercase tracking-wide text-[var(--color-text-muted)]">
+            Stage: {finding.stage}
+          </div>
+          <p className="text-[13px]">{finding.summary}</p>
+          {finding.evidence.length > 0 && (
+            <ul className="space-y-0.5 text-[11px] text-[var(--color-text-muted)]">
+              {finding.evidence.map((item) => <li key={item}>• {item}</li>)}
+            </ul>
+          )}
+          {finding.actions.length > 0 && (
+            <ul className="space-y-1 text-[12px]">
+              {finding.actions.map((item) => (
+                <li key={item} className="rounded bg-[var(--color-surface-1)] px-2 py-1.5">→ {item}</li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
     </section>
   )
 }

@@ -23,6 +23,19 @@ function notify(title: string, body: string): void {
   }
 }
 
+/**
+ * §120: per-type notification preference. A type the user disabled is neither
+ * recorded nor toasted. Unknown types default to enabled.
+ */
+function typeEnabled(_workspaceId: string, type: string): boolean {
+  try {
+    const disabled = getServices().repos.getSetting<string[]>('app', 'notifications.disabledTypes') ?? []
+    return !Array.isArray(disabled) || !disabled.includes(type)
+  } catch {
+    return true
+  }
+}
+
 export async function refreshConnectedChannels(): Promise<void> {
   const { repos } = getServices()
   for (const workspace of repos.listWorkspaces()) {
@@ -35,15 +48,17 @@ export async function refreshConnectedChannels(): Promise<void> {
       if (!result.ok) continue
 
       if ((result.videosUpserted ?? 0) > 0) {
-        repos.createNotification({
-          workspaceId: workspace.id,
-          type: 'sync',
-          payload: { platform, videos: result.videosUpserted, channel: result.channelTitle ?? null },
-        })
-        notify(
-          `${platform === 'youtube' ? 'YouTube' : 'Twitch'} refreshed`,
-          `${result.videosUpserted} item(s) updated for ${result.channelTitle ?? workspace.name}.`,
-        )
+        if (typeEnabled(workspace.id, 'sync')) {
+          repos.createNotification({
+            workspaceId: workspace.id,
+            type: 'sync',
+            payload: { platform, videos: result.videosUpserted, channel: result.channelTitle ?? null },
+          })
+          notify(
+            `${platform === 'youtube' ? 'YouTube' : 'Twitch'} refreshed`,
+            `${result.videosUpserted} item(s) updated for ${result.channelTitle ?? workspace.name}.`,
+          )
+        }
       }
     }
   }

@@ -321,3 +321,23 @@ primary keyword is set, the optimizer says so instead of guessing one.
 
 AI may offer a separate, labelled variant of this draft; it can never overwrite
 these deterministic results.
+
+## 20. Sponsor readiness (`core/scores/sponsor.ts`) — spec §68
+
+Operational attractiveness to a sponsor, computed **only** from stored rows.
+It is not a sponsorship promise, not a platform metric, and not a brand-safety
+verdict — the UI states this next to the score.
+
+| Component | Weight | Input | Normalization | Missing behaviour |
+|---|---|---|---|---|
+| Recent average views | 35 | mean views of videos published in the last 90 days | linear 100 → 20,000 views | excluded, weights renormalized |
+| Upload activity | 25 | uploads per month across the dated history span | linear 0.5 → 8 per month | excluded |
+| Schedule consistency | 15 | median upload gap vs mean gap (relative spread) | 100 − spread×100 | excluded |
+| Engagement | 15 | (likes + 2·comments) ÷ views × 100 | linear 0.2% → 8% | excluded |
+| Niche clarity | 10 | niche stated in the creator profile | binary 0/100 | excluded |
+
+- Confidence follows the shared engine: coverage < 60% ⇒ low confidence.
+- The media kit reuses the same inputs (recent average, median, uploads/month,
+  engagement %, top videos) plus a generated pitch outline. The kit carries a
+  caveat that numbers must match official analytics before sending, and nothing
+  is ever auto-sent.

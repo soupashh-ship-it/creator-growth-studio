@@ -369,6 +369,54 @@ export class Repositories {
     }>
   }
 
+  // -- channel snapshots (§119 goal progress) -------------------------------
+  /** Records a channel-level stats observation from an official sync. */
+  recordChannelSnapshot(input: {
+    workspaceId: string
+    platform: string
+    externalId: string
+    subscriberCount: number | null
+    viewCount: number | null
+    capturedAt?: string
+  }): void {
+    this.db
+      .prepare(
+        'INSERT INTO channel_snapshots (id, workspace_id, platform, external_id, subscriber_count, view_count, captured_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      )
+      .run(
+        crypto.randomUUID(),
+        input.workspaceId,
+        input.platform,
+        input.externalId,
+        input.subscriberCount,
+        input.viewCount,
+        input.capturedAt ?? new Date().toISOString(),
+      )
+  }
+
+  /** Channel snapshot history, ascending by time (used for goal progress). */
+  listChannelSnapshots(workspaceId: string, platform?: string): Array<{
+    at: string
+    platform: string
+    subscriber_count: number | null
+    view_count: number | null
+  }> {
+    const rows = (
+      platform
+        ? this.db
+            .prepare(
+              'SELECT captured_at, platform, subscriber_count, view_count FROM channel_snapshots WHERE workspace_id = ? AND platform = ? ORDER BY captured_at ASC',
+            )
+            .all(workspaceId, platform)
+        : this.db
+            .prepare(
+              'SELECT captured_at, platform, subscriber_count, view_count FROM channel_snapshots WHERE workspace_id = ? ORDER BY captured_at ASC',
+            )
+            .all(workspaceId)
+    ) as unknown as Array<{ captured_at: string; platform: string; subscriber_count: number | null; view_count: number | null }>
+    return rows.map((r) => ({ at: r.captured_at, platform: r.platform, subscriber_count: r.subscriber_count, view_count: r.view_count }))
+  }
+
   replaceAudienceDemographics(
     workspaceId: string,
     buckets: Array<{ dimension: string; bucket: string; viewerPercentage: number }>,

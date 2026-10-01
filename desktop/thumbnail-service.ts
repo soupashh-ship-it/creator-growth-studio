@@ -1,5 +1,6 @@
 import { BrowserWindow, dialog, nativeImage } from 'electron'
 import { analyzePixels, type PixelAnalysis } from '../core/thumbnail/pixels'
+import { runSizeTests, type SizeVerdict } from '../core/thumbnail/sizes'
 import {
   analyzeTitleThumbnailPair,
   scoreThumbnail,
@@ -27,6 +28,10 @@ export interface ThumbnailAnalysis {
   score?: ScoreResult
   issues?: ThumbnailIssues
   pair?: ReturnType<typeof analyzeTitleThumbnailPair> | null
+  /** §19 size-test verdicts computed from the measured features. */
+  sizeTests?: SizeVerdict[]
+  /** Data URL so the renderer can draw scaled previews without re-reading the file. */
+  imageDataUrl?: string
 }
 
 export async function chooseThumbnailImage(): Promise<string | null> {
@@ -73,6 +78,26 @@ export function analyzeThumbnailFile(
       ? analyzeTitleThumbnailPair(options.thumbnailText, options.title)
       : null
 
+  // §19: realistic feed-size warnings from the measured features, plus a data
+  // URL (JPEG, capped width) so the page can render the size previews locally.
+  const sizeTests = runSizeTests({
+    textHeightPct: features.textHeightPct,
+    textContrast: features.textContrast ?? null,
+    contrast: features.contrast,
+    clutter: features.clutter,
+  })
+  let imageDataUrl: string | undefined
+  try {
+    const maxPreviewWidth = 640
+    const preview =
+      size.width > maxPreviewWidth
+        ? image.resize({ width: maxPreviewWidth })
+        : image
+    imageDataUrl = preview.toDataURL()
+  } catch {
+    // Preview is cosmetic; analysis stays valid without it.
+  }
+
   return {
     ok: true,
     filePath,
@@ -82,6 +107,8 @@ export function analyzeThumbnailFile(
     score: scoreThumbnail(features),
     issues: thumbnailIssues(features),
     pair,
+    sizeTests,
+    imageDataUrl,
   }
 }
 

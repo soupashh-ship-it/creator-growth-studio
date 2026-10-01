@@ -233,6 +233,66 @@ export function App(): JSX.Element {
     )
     const actions: Command[] = [
       {
+        id: 'action:analyze-video',
+        label: 'Analyze video (open Videos)',
+        group: 'Action',
+        run: () => navigate('Videos'),
+      },
+      {
+        id: 'action:keyword-research',
+        label: 'Keyword research (open Keywords)',
+        group: 'Action',
+        run: () => navigate('Keywords'),
+      },
+      {
+        id: 'action:generate-titles',
+        label: 'Generate titles (open Titles)',
+        group: 'Action',
+        run: () => navigate('Titles'),
+      },
+      {
+        id: 'action:analyze-thumbnail',
+        label: 'Analyze thumbnail (open Thumbnails)',
+        group: 'Action',
+        run: () => navigate('Thumbnails'),
+      },
+      {
+        id: 'action:find-competitor',
+        label: 'Find competitor (open Competitors)',
+        group: 'Action',
+        run: () => navigate('Competitors'),
+      },
+      {
+        id: 'action:connect-youtube',
+        label: 'Connect YouTube (open Connections)',
+        group: 'Action',
+        run: () => navigate('Connections'),
+      },
+      {
+        id: 'action:connect-twitch',
+        label: 'Connect Twitch (open Connections)',
+        group: 'Action',
+        run: () => navigate('Connections'),
+      },
+      {
+        id: 'action:ask-copilot',
+        label: 'Ask Copilot (open Creator Copilot)',
+        group: 'Action',
+        run: () => navigate('Creator Copilot'),
+      },
+      {
+        id: 'action:open-calendar',
+        label: 'Open calendar',
+        group: 'Action',
+        run: () => navigate('Calendar'),
+      },
+      {
+        id: 'action:refresh-analytics',
+        label: 'Refresh analytics (open Channel and refresh)',
+        group: 'Action',
+        run: () => navigate('Channel'),
+      },
+      {
         id: 'action:backup',
         label: 'Back up data now',
         group: 'Action',

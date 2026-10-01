@@ -210,8 +210,218 @@ export function Channel(): JSX.Element {
               ))}
             </ul>
           </section>
+
+          <GrowthSection />
         </>
       )}
     </div>
+  )
+}
+
+interface SponsorReport {
+  readiness: {
+    score: number | null
+    confidence: string
+    components: Array<{ key: string; label: string; value: number | null; weight: number; detail: string }>
+    missing: string[]
+    explanation: string[]
+  }
+  mediaKit: {
+    channelTitle: string
+    niche: string | null
+    videoCount: number
+    recentAverageViews: number | null
+    medianViews: number | null
+    uploadsPerMonth: number | null
+    engagementRatePct: number | null
+    topVideos: Array<{ title: string; views: number | null; publishedAt: string | null }>
+    pitchOutline: string[]
+    caveat: string
+  }
+  hasData: boolean
+  note: string
+}
+
+interface ProgressReport {
+  goals: Array<{
+    goal: number
+    metric: string
+    current: number | null
+    change30d: number | null
+    remaining: number | null
+    progressPct: number | null
+    basis: string
+  }>
+  hasProfile: boolean
+  note: string
+}
+
+function fmt(n: number | null): string {
+  return n === null ? 'Not available' : nf.format(Math.round(n))
+}
+
+/**
+ * §68 sponsor readiness + §119 goal progress + §69 PDF export.
+ * Everything renders from the locally computed report; the media kit is a
+ * copyable draft, never auto-sent. Progress shows real 30-day snapshot deltas,
+ * never predicted completion dates.
+ */
+function GrowthSection(): JSX.Element {
+  const [sponsor, setSponsor] = useState<SponsorReport | null>(null)
+  const [progress, setProgress] = useState<ProgressReport | null>(null)
+  const [notice, setNotice] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
+
+  async function run(): Promise<void> {
+    setBusy(true)
+    try {
+      const [s, p] = await Promise.all([
+        callIpc<SponsorReport>(IPC.growthSponsor),
+        callIpc<ProgressReport>(IPC.growthProgress),
+      ])
+      setSponsor(s)
+      setProgress(p)
+    } catch (cause) {
+      setNotice(cause instanceof Error ? cause.message : 'Could not build the growth report.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function copyKit(): Promise<void> {
+    if (!sponsor) return
+    const kit = sponsor.mediaKit
+    const text = [
+      `Media kit — ${kit.channelTitle}`,
+      kit.niche ? `Niche: ${kit.niche}` : null,
+      '',
+      ...kit.pitchOutline,
+      '',
+      'Top videos:',
+      ...kit.topVideos.map((v) => `- ${v.title} — ${fmt(v.views)} views`),
+      '',
+      kit.caveat,
+    ].filter((line): line is string => line !== null).join('\n')
+    try {
+      await navigator.clipboard.writeText(text)
+      setNotice('Media kit copied to the clipboard as Markdown. Edit before sending.')
+    } catch {
+      setNotice('Could not access the clipboard.')
+    }
+    window.setTimeout(() => setNotice(null), 4000)
+  }
+
+  async function exportPdf(): Promise<void> {
+    if (!sponsor) return
+    const kit = sponsor.mediaKit
+    const markdown = [
+      `## Readiness score`,
+      `${sponsor.readiness.score === null ? 'Not available' : `${Math.round(sponsor.readiness.score)}/100`} (${sponsor.readiness.confidence} confidence)`,
+      '',
+      ...sponsor.readiness.components.map((c) => `- ${c.label}: ${c.value === null ? 'Not available' : Math.round(c.value)} — ${c.detail}`),
+      '',
+      `## Media kit`,
+      ...kit.pitchOutline.map((line) => `- ${line}`),
+      '',
+      `## Top videos`,
+      ...kit.topVideos.map((v) => `- ${v.title} — ${fmt(v.views)} views`),
+      '',
+      kit.caveat,
+    ].join('\n')
+    try {
+      const saved = await callIpc<{ ok: boolean; canceled?: boolean; path?: string; error?: string }>(IPC.dataSavePdf, {
+        defaultName: `media-kit-${kit.channelTitle.replace(/[^\w-]+/g, '-').toLowerCase()}`,
+        title: `Media kit — ${kit.channelTitle}`,
+        markdown,
+      })
+      if (saved.ok) setNotice(`Saved to ${saved.path}.`)
+      else if (!saved.canceled) setNotice(saved.error ?? 'Could not save the PDF.')
+    } catch (cause) {
+      setNotice(cause instanceof Error ? cause.message : 'Could not save the PDF.')
+    }
+    window.setTimeout(() => setNotice(null), 4000)
+  }
+
+  return (
+    <section className="rounded-lg border border-[var(--color-border-subtle)] bg-[var(--color-surface-1)] p-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <h2 className="text-sm font-semibold">Sponsor readiness & goals</h2>
+          <p className="mt-0.5 text-[12px] text-[var(--color-text-secondary)]">
+            Operational indicators from your stored data — not a sponsorship promise or a platform metric.
+          </p>
+        </div>
+        <div className="flex shrink-0 gap-2">
+          <button type="button" onClick={() => void run()} disabled={busy} className="rounded-md border border-[var(--color-border-subtle)] px-3 py-1.5 text-[12px] disabled:opacity-40">
+            {busy ? 'Computing…' : 'Compute'}
+          </button>
+          {sponsor && (
+            <>
+              <button type="button" onClick={() => void copyKit()} className="rounded-md border border-[var(--color-border-subtle)] px-3 py-1.5 text-[12px]">
+                Copy media kit
+              </button>
+              <button type="button" onClick={() => void exportPdf()} className="rounded-md border border-[var(--color-border-subtle)] px-3 py-1.5 text-[12px]">
+                Export PDF
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+      {notice && <p className="mt-2 text-[12px] text-[var(--color-text-secondary)]">{notice}</p>}
+
+      {sponsor && (
+        <div className="mt-3 grid grid-cols-1 gap-4 xl:grid-cols-2">
+          <div className="rounded-md bg-[var(--color-surface-2)] p-3">
+            <div className="flex items-baseline justify-between">
+              <span className="text-[13px] font-medium">Readiness</span>
+              <span className="text-xl font-semibold tabular-nums">
+                {sponsor.readiness.score === null ? '—' : `${Math.round(sponsor.readiness.score)}/100`}
+              </span>
+            </div>
+            <ul className="mt-2 space-y-1 text-[11px]">
+              {sponsor.readiness.components.map((c) => (
+                <li key={c.key} className="flex items-center justify-between gap-2">
+                  <span className="text-[var(--color-text-muted)]">{c.label}</span>
+                  <span className="tabular-nums">{c.value === null ? '—' : Math.round(c.value)}</span>
+                </li>
+              ))}
+            </ul>
+            {sponsor.readiness.missing.length > 0 && (
+              <p className="mt-2 text-[11px] text-[var(--color-text-muted)]">Missing: {sponsor.readiness.missing.join(', ')}</p>
+            )}
+          </div>
+          <div className="rounded-md bg-[var(--color-surface-2)] p-3">
+            <div className="text-[13px] font-medium">Media kit numbers</div>
+            <ul className="mt-2 space-y-1 text-[11px] text-[var(--color-text-secondary)]">
+              <li>Average views: {fmt(sponsor.mediaKit.recentAverageViews)} · Median: {fmt(sponsor.mediaKit.medianViews)}</li>
+              <li>Uploads/month: {sponsor.mediaKit.uploadsPerMonth === null ? 'Not available' : sponsor.mediaKit.uploadsPerMonth}</li>
+              <li>Engagement: {sponsor.mediaKit.engagementRatePct === null ? 'Not available' : `${sponsor.mediaKit.engagementRatePct.toFixed(2)}%`}</li>
+            </ul>
+          </div>
+        </div>
+      )}
+
+      {progress && progress.goals.length > 0 && (
+        <div className="mt-3 space-y-2">
+          {progress.goals.map((goal) => (
+            <div key={`${goal.metric}-${goal.goal}`} className="rounded-md bg-[var(--color-surface-2)] p-3 text-[12px]">
+              <div className="flex items-baseline justify-between">
+                <span className="font-medium">
+                  {nf.format(goal.goal)} {goal.metric}
+                </span>
+                <span className="tabular-nums">{goal.progressPct === null ? '—' : `${Math.round(goal.progressPct)}%`}</span>
+              </div>
+              <p className="mt-1 text-[var(--color-text-secondary)]">
+                Current: {fmt(goal.current)} · 30-day change: {goal.change30d === null ? 'Not available' : `${goal.change30d >= 0 ? '+' : ''}${nf.format(goal.change30d)}`} · Remaining: {fmt(goal.remaining)}
+              </p>
+              <p className="mt-0.5 text-[11px] text-[var(--color-text-muted)]">{goal.basis}</p>
+            </div>
+          ))}
+        </div>
+      )}
+      {progress && progress.goals.length === 0 && (
+        <p className="mt-2 text-[12px] text-[var(--color-text-muted)]">{progress.note}</p>
+      )}
+    </section>
   )
 }

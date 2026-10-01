@@ -21,6 +21,13 @@ interface PixelFeatures {
   textHeightPct: number | null
 }
 
+interface SizeVerdict {
+  preset: { key: string; label: string; widthPx: number; context: string }
+  textReadability: number | null
+  imageReadability: number
+  warnings: string[]
+}
+
 interface ThumbnailAnalysis {
   ok: boolean
   canceled?: boolean
@@ -32,6 +39,8 @@ interface ThumbnailAnalysis {
   score?: ScoreResult
   issues?: { strengths: string[]; problems: string[]; textTooSmall: boolean }
   pair?: { duplicates: boolean; overlap: number; recommendation: string; suggestions: string[] } | null
+  sizeTests?: SizeVerdict[]
+  imageDataUrl?: string
 }
 
 const input =
@@ -162,6 +171,50 @@ export function Thumbnails(): JSX.Element {
                 <p className="mt-1 text-[11px] text-[var(--color-text-muted)]">
                   overlap {Math.round(analysis.pair.overlap * 100)}% · {analysis.pair.duplicates ? 'repeats' : 'complements'} the title
                 </p>
+              </section>
+            )}
+
+            {analysis.sizeTests && analysis.sizeTests.length > 0 && (
+              <section className="rounded-lg border border-[var(--color-border-subtle)] bg-[var(--color-surface-1)] p-4">
+                <h2 className="text-sm font-semibold">Size test</h2>
+                <p className="mt-1 text-[12px] text-[var(--color-text-secondary)]">
+                  The same image at realistic feed sizes. Warnings come from the measured pixel features — not guesses.
+                </p>
+                {analysis.imageDataUrl && (
+                  <div className="mt-3 flex flex-wrap items-end gap-4">
+                    {analysis.sizeTests.map((verdict) => (
+                      <figure key={verdict.preset.key} className="space-y-1">
+                        <img
+                          src={analysis.imageDataUrl}
+                          alt={`${verdict.preset.label} preview`}
+                          width={verdict.preset.widthPx}
+                          className="rounded border border-[var(--color-border-subtle)]"
+                        />
+                        <figcaption className="text-[10px] text-[var(--color-text-muted)]">
+                          {verdict.preset.label} · {verdict.preset.widthPx}px
+                        </figcaption>
+                      </figure>
+                    ))}
+                  </div>
+                )}
+                <ul className="mt-3 space-y-1.5">
+                  {analysis.sizeTests.map((verdict) => (
+                    <li key={verdict.preset.key} className="rounded-md bg-[var(--color-surface-2)] p-2.5 text-[12px]">
+                      <div className="flex items-center justify-between">
+                        <span className="font-medium">{verdict.preset.label}</span>
+                        <span className="text-[11px] tabular-nums text-[var(--color-text-muted)]">
+                          image {verdict.imageReadability}/100
+                          {verdict.textReadability !== null ? ` · text ${verdict.textReadability}/100` : ''}
+                        </span>
+                      </div>
+                      {verdict.warnings.length > 0 && (
+                        <ul className="mt-1 space-y-0.5 text-[11px] text-[var(--color-warning)]">
+                          {verdict.warnings.map((w) => <li key={w}>! {w}</li>)}
+                        </ul>
+                      )}
+                    </li>
+                  ))}
+                </ul>
               </section>
             )}
 

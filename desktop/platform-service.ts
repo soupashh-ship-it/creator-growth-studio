@@ -288,6 +288,16 @@ export async function syncPlatform(id: PlatformId, workspaceId: string): Promise
       videoCount: channel.videoCount,
       viewCount: channel.viewCount,
     })
+    // §119: record the observation so goal progress can show real 30-day change.
+    if (channel.subscriberCount !== null || channel.viewCount !== null) {
+      repos().recordChannelSnapshot({
+        workspaceId,
+        platform: id,
+        externalId: channel.externalId,
+        subscriberCount: channel.subscriberCount,
+        viewCount: channel.viewCount,
+      })
+    }
 
     const videos = await platform.getContent({ limit: 50 })
     for (const video of videos) {

@@ -191,6 +191,8 @@ export function DevTools(): JSX.Element {
         </ul>
       </section>
 
+      <UpdateSection />
+
       <section className="rounded-lg border border-[var(--color-border-subtle)] bg-[var(--color-surface-1)] p-4">
         <h2 className="text-sm font-semibold">Database &amp; jobs</h2>
         {data.data && (
@@ -256,5 +258,67 @@ export function DevTools(): JSX.Element {
         </p>
       </section>
     </div>
+  )
+}
+
+interface UpdateCheckResult {
+  ok: boolean
+  currentVersion: string
+  latestVersion: string | null
+  updateAvailable: boolean
+  releaseUrl: string | null
+  checkedAt: string
+  error?: string
+}
+
+/** §88: read-only update check. Nothing is downloaded or installed here. */
+function UpdateSection(): JSX.Element {
+  const [result, setResult] = useState<UpdateCheckResult | null>(null)
+  const [busy, setBusy] = useState(false)
+
+  async function check(): Promise<void> {
+    setBusy(true)
+    try {
+      setResult(await callIpc<UpdateCheckResult>(IPC.appUpdateCheck))
+    } catch {
+      setResult(null)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <section className="rounded-lg border border-[var(--color-border-subtle)] bg-[var(--color-surface-1)] p-4">
+      <div className="flex items-center justify-between">
+        <h2 className="text-sm font-semibold">Update check</h2>
+        <button
+          type="button"
+          onClick={() => void check()}
+          disabled={busy}
+          className="rounded-md border border-[var(--color-border-subtle)] px-3 py-1.5 text-[12px] disabled:opacity-40"
+        >
+          {busy ? 'Checking…' : 'Check for updates'}
+        </button>
+      </div>
+      {result && (
+        <p className="mt-2 text-[12px] text-[var(--color-text-secondary)]">
+          {result.ok
+            ? result.updateAvailable
+              ? `Version ${result.latestVersion} is available — `
+              : `Up to date (latest release ${result.latestVersion ?? 'unknown'}) · `
+            : `Check failed: ${result.error ?? 'unknown error'} · `}
+          running {result.currentVersion}.
+          {result.ok && result.updateAvailable && result.releaseUrl && (
+            <>{' '}<button type="button" onClick={() => void callIpc(IPC.openExternal, result.releaseUrl).catch(() => undefined)} className="text-[var(--color-accent)] underline">Open the release page</button> to download it yourself.</>
+          )}
+          {' '}The app never downloads or installs anything by itself.
+        </p>
+      )}
+      {!result && !busy && (
+        <p className="mt-2 text-[12px] text-[var(--color-text-muted)]">
+          Queries the project's GitHub releases and reports only — no auto-install.
+        </p>
+      )}
+    </section>
   )
 }
