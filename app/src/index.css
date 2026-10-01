@@ -1,0 +1,59 @@
+@import 'tailwindcss';
+
+/*
+ * Design tokens — dark-first, restrained (spec §71).
+ * No neon/cyberpunk. Values are intentionally low-contrast and calm.
+ */
+@theme {
+  --color-surface-0: #0b0d10;
+  --color-surface-1: #12151a;
+  --color-surface-2: #191d24;
+  --color-border-subtle: #242a33;
+  --color-text-primary: #e8eaed;
+  --color-text-secondary: #9aa3ad;
+  --color-text-muted: #6b7480;
+  --color-accent: #6ea8fe;
+  --color-positive: #4ade80;
+  --color-warning: #fbbf24;
+  --color-danger: #f87171;
+}
+
+/*
+ * Light theme (spec §71). Applied by toggling `.light` on <html> from the
+ * Appearance page; the tokens are the same names, so every component adapts.
+ */
+html.light {
+  --color-surface-0: #f6f7f9;
+  --color-surface-1: #ffffff;
+  --color-surface-2: #eef1f5;
+  --color-border-subtle: #d5dae1;
+  --color-text-primary: #12151a;
+  --color-text-secondary: #4b5563;
+  --color-text-muted: #6b7280;
+  --color-accent: #2563eb;
+  --color-positive: #15803d;
+  --color-warning: #b45309;
+  --color-danger: #b91c1c;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--color-surface-0);
+  color: var(--color-text-primary);
+  font-family:
+    'Segoe UI Variable Text', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  font-size: 14px;
+}
+
+/* Visible focus for keyboard/accessibility (spec §102) */
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}

@@ -1,0 +1,38 @@
+# Packaging configuration (spec §88, §99).
+#
+# Produces a per-user Windows installer. Signing is intentionally NOT configured
+# here: the spec forbids insecure executable replacement, and signed releases are
+# only required once distribution begins (spec §88). Add a certificate later.
+appId: com.creatorgrowthstudio.app
+productName: Creator Growth Studio
+copyright: Copyright © 2026 Creator Growth Studio
+
+directories:
+  output: release
+  buildResources: build
+
+# Only ship the built output; no source maps or local data.
+files:
+  - out/**
+  - package.json
+  - '!**/*.map'
+
+asar: true
+
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+  # WebView2 is in the electron package; no extra runtime needed.
+
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: Creator Growth Studio
+
+# Do not publish anywhere automatically.
+publish: null

@@ -1,0 +1,61 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "types": ["node", "vite/client"],
+
+    "jsx": "react-jsx",
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true,
+    "exactOptionalPropertyTypes": false,
+
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "verbatimModuleSyntax": false,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "noEmit": true,
+
+    "baseUrl": ".",
+    "paths": {
+      "@app/*": ["app/src/*"],
+      "@core/*": ["core/*"],
+      "@providers/*": ["providers/*"],
+      "@platforms/*": ["platforms/*"],
+      "@analytics/*": ["analytics/*"],
+      "@research/*": ["research/*"],
+      "@seo/*": ["seo/*"],
+      "@ai/*": ["ai/*"],
+      "@database/*": ["database/*"],
+      "@auth/*": ["auth/*"],
+      "@jobs/*": ["jobs/*"],
+      "@export/*": ["export/*"],
+      "@prompts/*": ["prompts/*"]
+    }
+  },
+  "include": [
+    "app",
+    "core",
+    "providers",
+    "platforms",
+    "analytics",
+    "research",
+    "seo",
+    "ai",
+    "database",
+    "auth",
+    "jobs",
+    "export",
+    "prompts",
+    "desktop",
+    "tests",
+    "electron.vite.config.ts",
+    "vitest.config.ts"
+  ]
+}
